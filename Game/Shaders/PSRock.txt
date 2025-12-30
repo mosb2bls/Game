@@ -1,0 +1,57 @@
+cbuffer rockPSBuffer : register(b0)
+{
+    float4 lightDir_ambient;  // xyz=light direction, w=ambient strength
+    float4 rockColor;         // RGB tint for all rocks, A=unused
+};
+
+Texture2D g_texture : register(t0);
+SamplerState g_sampler : register(s0);
+
+struct PS_INPUT
+{
+    float4 Pos : SV_POSITION;
+    float3 Normal : NORMAL;
+    float2 TexCoords : TEXCOORD0;
+    float3 WorldPos : TEXCOORD1;
+};
+
+// Simple noise for subtle color variation per rock
+float hash(float3 p)
+{
+    return frac(sin(dot(p, float3(127.1, 311.7, 74.7))) * 43758.5453);
+}
+
+float4 PS(PS_INPUT input) : SV_TARGET
+{
+    // 1. Sample texture
+    float4 texColor = g_texture.Sample(g_sampler, input.TexCoords);
+    
+    // 2. Apply rock color tint (multiply texture by tint color)
+    float3 baseColor = texColor.rgb * rockColor.rgb;
+    
+    // 3. Add subtle per-rock color variation (based on world position)
+    float colorNoise = hash(input.WorldPos * 0.1);
+    baseColor *= (0.95 + colorNoise * 0.1); // Slight variation (95%-105%)
+    
+    // 4. Lighting calculation
+    float3 lightDir = normalize(lightDir_ambient.xyz);
+    float3 normal = normalize(input.Normal);
+    
+    // Diffuse lighting
+    float NdotL = saturate(dot(normal, lightDir));
+    float diffuse = NdotL * 0.8;  // 80% diffuse contribution
+    
+    // Ambient
+    float ambient = lightDir_ambient.w;  // Base ambient level
+    
+    // 5. Combine lighting
+    float lighting = diffuse + ambient;
+    float3 finalColor = baseColor * lighting;
+    
+    // 6. Add slight rim lighting for depth (highlights edges)
+    float3 viewDir = normalize(input.WorldPos);
+    float rim = pow(1.0 - saturate(dot(normal, -viewDir)), 3.0);
+    finalColor += rim * 0.1 * rockColor.rgb;
+    
+    return float4(finalColor, texColor.a);
+}

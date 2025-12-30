@@ -1,0 +1,143 @@
+
+
+cbuffer WaterBuffer : register(b0)
+{
+    float4x4 worldViewProj;
+    float4x4 world;
+    float4x4 reflectionMatrix;
+    float4 cameraPos_time;          // xyz = camera position, w = time
+    float4 waterParams;             // x = waterLevel, y = radius, z = transparency, w = fresnelPower
+    float4 shallowColor;            // xyz = color, w = fresnelBias
+    float4 deepColor;               // xyz = color, w = reflectionStrength
+    float4 sunDirection;            // xyz = direction, w = specularPower
+    float4 sunColor;                // xyz = color, w = specularIntensity
+    float4 waveParams;              // x = speed, y = scale, z = distortion, w = unused
+    float4 screenParams;            // x = width, y = height, z = 1/width, w = 1/height
+    
+    // Gerstner wave parameters (4 waves)
+    float4 waveDirections[4];       // xy = direction (normalized)
+    float4 waveParams2[4];          // x = wavelength, y = amplitude, z = steepness, w = speed
+};
+
+struct VSInput
+{
+    float3 position : POSITION;
+    float2 texcoord : TEXCOORD;
+    float3 normal : NORMAL;
+};
+
+struct VSOutput
+{
+    float4 position : SV_POSITION;
+    float3 worldPos : TEXCOORD0;
+    float3 normal : TEXCOORD1;
+    float2 uv : TEXCOORD2;
+    float4 reflectPos : TEXCOORD3;  // Position in reflection space
+    float3 viewDir : TEXCOORD4;
+    float edgeFade : TEXCOORD5;     // For shore transparency
+};
+
+// ============================================================================
+// GERSTNER WAVE FUNCTION
+// ============================================================================
+// Returns: xyz = position offset, w = not used here
+// Also outputs partial derivatives for normal calculation
+
+static const float PI = 3.14159265359;
+
+void GerstnerWave(
+    float2 direction,
+    float wavelength,
+    float amplitude,
+    float steepness,
+    float speed,
+    float2 pos,
+    float time,
+    inout float3 offset,
+    inout float3 tangent,
+    inout float3 binormal)
+{
+    // Wave parameters
+    float k = 2.0 * PI / wavelength;            // Wave number
+    float c = sqrt(9.81 / k);                   // Phase speed (gravity waves)
+    float2 d = normalize(direction);            // Direction
+    float f = k * (dot(d, pos) - c * speed * time);  // Phase
+    float a = amplitude * steepness;            // Steepness-adjusted amplitude
+    
+    // Position offset
+    offset.x += d.x * a * cos(f);
+    offset.y += amplitude * sin(f);
+    offset.z += d.y * a * cos(f);
+    
+    // Tangent (partial derivative with respect to x)
+    tangent.x += -d.x * d.x * steepness * amplitude * k * sin(f);
+    tangent.y += d.x * amplitude * k * cos(f);
+    tangent.z += -d.x * d.y * steepness * amplitude * k * sin(f);
+    
+    // Binormal (partial derivative with respect to z)
+    binormal.x += -d.x * d.y * steepness * amplitude * k * sin(f);
+    binormal.y += d.y * amplitude * k * cos(f);
+    binormal.z += -d.y * d.y * steepness * amplitude * k * sin(f);
+}
+
+VSOutput VS(VSInput input)
+{
+    VSOutput output;
+    
+    float time = cameraPos_time.w * waveParams.x;
+    float waveScale = waveParams.y;
+    float3 pos = input.position;
+    float2 xz = pos.xz;
+    
+    // Calculate distance from center for edge fade
+    float2 center = float2(0, 0);  // Lake center (in local space would need adjustment)
+    float radius = waterParams.y;
+    float distFromCenter = length(xz - center);
+    float edgeDist = radius - distFromCenter;
+    output.edgeFade = saturate(edgeDist / (radius * 0.1));  // Fade in outer 10%
+    
+    // Initialize offset and derivatives
+    float3 offset = float3(0, 0, 0);
+    float3 tangent = float3(1, 0, 0);
+    float3 binormal = float3(0, 0, 1);
+    
+    // Apply 4 Gerstner waves
+    [unroll]
+    for (int i = 0; i < 4; i++)
+    {
+        float2 dir = waveDirections[i].xy;
+        float wavelength = waveParams2[i].x;
+        float amplitude = waveParams2[i].y * waveScale;
+        float steepness = waveParams2[i].z;
+        float speed = waveParams2[i].w;
+        
+        GerstnerWave(dir, wavelength, amplitude, steepness, speed, xz, time, offset, tangent, binormal);
+    }
+    
+    // Apply offset to position
+    pos += offset;
+    
+    // Calculate normal from tangent and binormal
+    float3 normal = normalize(cross(binormal, tangent));
+    
+    // Transform to clip space
+    output.position = mul(float4(pos, 1.0), worldViewProj);
+    
+    // World position (for lighting)
+    float4 worldPos4 = mul(float4(pos, 1.0), world);
+    output.worldPos = worldPos4.xyz;
+    
+    // Normal in world space
+    output.normal = normalize(mul(float4(normal, 0.0), world).xyz);
+    
+    // UV coordinates
+    output.uv = input.texcoord;
+    
+    // Reflection texture coordinates
+    output.reflectPos = mul(float4(pos, 1.0), reflectionMatrix);
+    
+    // View direction
+    output.viewDir = normalize(cameraPos_time.xyz - output.worldPos);
+    
+    return output;
+}

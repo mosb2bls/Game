@@ -1,0 +1,25 @@
+cbuffer staticMeshBuffer : register(b0)
+{
+    float4x4 W;
+    float4x4 VP;
+};
+
+struct VSIn
+{
+    float3 pos     : POSITION;
+    float3 normal  : NORMAL;
+    float3 tangent : TANGENT;
+    float2 uv      : TEXCOORD;
+};
+
+struct VSOut
+{
+    float4 pos : SV_POSITION;
+};
+
+VSOut VS(VSIn i)
+{
+    VSOut o;
+    o.pos = float4(i.pos.xy, 0.0, 1.0);
+    return o;
+}

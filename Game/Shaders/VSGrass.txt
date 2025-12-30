@@ -1,0 +1,108 @@
+cbuffer grassBuffer : register(b0)
+{
+    float4x4 W;
+    float4x4 VP;
+    float4 windParams;     // xy=direction, z=strength, w=time
+    float4 cameraPos;      // xyz=position, w=viewDistance
+};
+
+// Per-vertex data (from mesh)
+struct VS_INPUT
+{
+    float3 Pos : POSITION;
+    float3 Normal : NORMAL;
+    float3 Tangent : TANGENT;
+    float2 TexCoords : TEXCOORD;
+    
+    // Per-instance data (input layout slot 1)
+    float3 InstancePos : INSTANCEPOS;
+    float InstanceRotY : INSTANCEROT;
+    float InstanceScale : INSTANCESCALE;
+    float InstanceWindPhase : INSTANCEWINDPHASE;
+    uint InstanceID : SV_InstanceID;
+};
+
+struct PS_INPUT
+{
+    float4 Pos : SV_POSITION;
+    float3 Normal : NORMAL;
+    float2 TexCoords : TEXCOORD0;
+    float3 WorldPos : TEXCOORD1;
+    float Height : TEXCOORD2;  // Height along blade (0=bottom, 1=top)
+};
+
+// Simple 2D noise function for wind variation
+float noise(float2 p)
+{
+    return frac(sin(dot(p, float2(127.1, 311.7))) * 43758.5453);
+}
+
+PS_INPUT VS(VS_INPUT input)
+{
+    PS_INPUT output;
+    
+    // 1. Apply instance scale
+    float3 localPos = input.Pos * input.InstanceScale;
+    
+    // 2. Rotation matrix around Y axis
+    float cosR = cos(input.InstanceRotY);
+    float sinR = sin(input.InstanceRotY);
+    float3x3 rotationMatrix = float3x3(
+        cosR,  0.0, sinR,
+        0.0,   1.0, 0.0,
+        -sinR, 0.0, cosR
+    );
+    
+    localPos = mul(localPos, rotationMatrix);
+    float3 localNormal = mul(input.Normal, rotationMatrix);
+    
+    // 3. Calculate height factor (0 at base, 1 at top)
+    // Assuming grass blade vertices have Y from 0 (base) to some height
+    float heightFactor = saturate(input.Pos.y / 1.0); // Adjust divisor based on your model
+    output.Height = heightFactor;
+    
+    // 4. Wind animation (affects only upper vertices)
+    float windTime = windParams.w;
+    float2 windDir = normalize(windParams.xy);
+    float windStr = windParams.z;
+    
+    // Primary wave - large, slow
+    float2 worldPosXZ = input.InstancePos.xz;
+    float wave1 = sin(windTime * 1.0 + worldPosXZ.x * 0.3 + worldPosXZ.y * 0.2 + input.InstanceWindPhase) * 0.5 + 0.5;
+    
+    // Secondary wave - smaller, faster (for detail)
+    float wave2 = sin(windTime * 2.5 + worldPosXZ.x * 0.8 + worldPosXZ.y * 0.6 + input.InstanceWindPhase * 2.0) * 0.5 + 0.5;
+    
+    // Combine waves
+    float windEffect = wave1 * 0.7 + wave2 * 0.3;
+    
+    // Add spatial variation using noise
+    float noiseVal = noise(worldPosXZ * 0.1);
+    windEffect = windEffect * (0.7 + noiseVal * 0.3);
+    
+    // Apply wind displacement (only to upper part of grass)
+    float bendAmount = heightFactor * heightFactor; // Quadratic for natural bend
+    float3 windOffset = float3(
+        windDir.x * windEffect * windStr * bendAmount * 0.3,
+        -bendAmount * 0.1 * windEffect,  // Slight droop
+        windDir.y * windEffect * windStr * bendAmount * 0.3
+    );
+    
+    localPos += windOffset;
+    
+    // 5. Translate to world position
+    float3 worldPos = localPos + input.InstancePos;
+    output.WorldPos = worldPos;
+    
+    // 6. Transform to clip space
+    float4 worldPos4 = float4(worldPos, 1.0);
+    output.Pos = mul(worldPos4, VP);
+    
+    // 7. Transform normal to world space
+    output.Normal = normalize(mul(localNormal, (float3x3)W));
+    
+    // 8. Pass through texture coordinates
+    output.TexCoords = input.TexCoords;
+    
+    return output;
+}

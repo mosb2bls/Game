@@ -1,0 +1,68 @@
+cbuffer grassPSBuffer : register(b0)
+{
+    float4 lightDir_ambient;  // xyz=light direction, w=ambient strength
+    float4 grassColorTop;     // Color at tip of grass
+    float4 grassColorBottom;  // Color at base of grass
+};
+
+Texture2D g_texture : register(t0);
+SamplerState g_sampler : register(s0);
+
+struct PS_INPUT
+{
+    float4 Pos : SV_POSITION;
+    float3 Normal : NORMAL;
+    float2 TexCoords : TEXCOORD0;
+    float3 WorldPos : TEXCOORD1;
+    float Height : TEXCOORD2;
+};
+
+// Simple noise for color variation
+float hash(float2 p)
+{
+    return frac(sin(dot(p, float2(127.1, 311.7))) * 43758.5453);
+}
+
+float4 PS(PS_INPUT input) : SV_TARGET
+{
+    // 1. Sample texture
+    float4 texColor = g_texture.Sample(g_sampler, input.TexCoords);
+    
+    // Alpha test - discard transparent pixels
+    if (texColor.a < 0.1)
+        discard;
+    
+    // 2. Gradient color from bottom to top
+    float heightGradient = input.Height;
+    float3 baseColor = lerp(grassColorBottom.rgb, grassColorTop.rgb, heightGradient);
+    
+    // 3. Add slight color variation based on world position
+    float colorNoise = hash(input.WorldPos.xz * 0.5);
+    baseColor *= (0.9 + colorNoise * 0.2);
+    
+    // 4. Lighting calculation
+    float3 lightDir = normalize(lightDir_ambient.xyz);
+    float3 normal = normalize(input.Normal);
+    
+    // Diffuse lighting
+    float NdotL = saturate(dot(normal, lightDir));
+    float diffuse = NdotL * 0.7;
+    
+    // Ambient
+    float ambient = lightDir_ambient.w;
+    
+    // Subsurface scattering fake (grass is translucent)
+    // When light comes from behind, grass glows slightly
+    float backLight = saturate(dot(normal, -lightDir));
+    float subsurface = backLight * 0.3 * heightGradient; // Only upper parts glow
+    
+    // 5. Combine everything
+    float lighting = diffuse + ambient + subsurface;
+    float3 finalColor = baseColor * texColor.rgb * lighting;
+    
+    // 6. Add slight ambient occlusion at base
+    float ao = 0.7 + heightGradient * 0.3;
+    finalColor *= ao;
+    
+    return float4(finalColor, texColor.a);
+}

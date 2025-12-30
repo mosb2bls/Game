@@ -1,0 +1,175 @@
+// ============================================================================
+// PSFogRaymarch.hlsl - Volumetric Fog Ray Marching
+// ============================================================================
+// Performs ray marching through the scene to calculate fog density
+// Outputs: RGB = fog color, A = fog opacity (used for blur amount)
+// ============================================================================
+
+cbuffer FogBuffer : register(b0)
+{
+    float4x4 invViewProj;
+    float4 cameraPos_time;      // xyz = camera position, w = time
+    float4 fogColor_density;    // xyz = fog color, w = density
+    float4 sunDir_scattering;   // xyz = sun direction, w = scattering
+    float4 params1;             // x = heightFalloff, y = groundLevel, z = maxHeight, w = mieG
+    float4 params2;             // x = maxDistance, y = windSpeed, z = windDirX, w = windDirZ
+    float4 sunColor_pad;        // xyz = sun color
+    float4 ambientColor_pad;    // xyz = ambient color
+    float4 screenSize;          // x = fullW, y = fullH, z = fogW, w = fogH
+    int numSteps;
+    float3 padding;
+};
+
+Texture2D<float> depthTexture : register(t1);
+SamplerState linearSampler : register(s0);
+
+struct PSInput
+{
+    float4 position : SV_POSITION;
+    float2 texcoord : TEXCOORD0;
+};
+
+// ============================================================================
+// NOISE FUNCTIONS
+// ============================================================================
+
+float hash(float3 p)
+{
+    p = frac(p * 0.3183099 + 0.1);
+    p *= 17.0;
+    return frac(p.x * p.y * p.z * (p.x + p.y + p.z));
+}
+
+float noise3D(float3 p)
+{
+    float3 i = floor(p);
+    float3 f = frac(p);
+    f = f * f * (3.0 - 2.0 * f);
+    
+    return lerp(
+        lerp(lerp(hash(i + float3(0, 0, 0)), hash(i + float3(1, 0, 0)), f.x),
+             lerp(hash(i + float3(0, 1, 0)), hash(i + float3(1, 1, 0)), f.x), f.y),
+        lerp(lerp(hash(i + float3(0, 0, 1)), hash(i + float3(1, 0, 1)), f.x),
+             lerp(hash(i + float3(0, 1, 1)), hash(i + float3(1, 1, 1)), f.x), f.y),
+        f.z);
+}
+
+// ============================================================================
+// FOG DENSITY
+// ============================================================================
+
+float getFogDensity(float3 pos, float time)
+{
+    float heightFalloff = params1.x;
+    float groundLevel = params1.y;
+    float maxHeight = params1.z;
+    float baseDensity = fogColor_density.w;
+    
+    // Height-based density
+    float h = pos.y - groundLevel;
+    float heightFactor = exp(-heightFalloff * max(h, 0.0)) * saturate(1.0 - h / maxHeight);
+    
+    // Animated noise for variation
+    float3 noisePos = pos * 0.02;
+    noisePos.xz += time * float2(params2.z, params2.w) * params2.y;
+    float n = noise3D(noisePos) * 0.5 + noise3D(noisePos * 2.1) * 0.25 + noise3D(noisePos * 4.3) * 0.125;
+    
+    return baseDensity * heightFactor * (0.7 + n * 0.6);
+}
+
+// ============================================================================
+// PHASE FUNCTION (Mie Scattering)
+// ============================================================================
+
+float henyeyGreenstein(float cosTheta, float g)
+{
+    float g2 = g * g;
+    return (1.0 - g2) / (4.0 * 3.14159265 * pow(abs(1.0 + g2 - 2.0 * g * cosTheta), 1.5));
+}
+
+float phaseFunction(float cosTheta, float mieG)
+{
+    float forward = henyeyGreenstein(cosTheta, 0.6);
+    float backward = henyeyGreenstein(cosTheta, -0.2);
+    return lerp(backward, forward, mieG);
+}
+
+// ============================================================================
+// MAIN
+// ============================================================================
+
+float4 main(PSInput input) : SV_TARGET
+{
+    float2 uv = input.texcoord;
+    
+    // Sample depth
+    float depth = depthTexture.Sample(linearSampler, uv);
+    
+    // Reconstruct world position
+    float2 clipXY = uv * 2.0 - 1.0;
+    clipXY.y = -clipXY.y;
+    
+    float4 clipNear = float4(clipXY, 0.0, 1.0);
+    float4 clipFar = float4(clipXY, depth, 1.0);
+    
+    float4 worldNear = mul(clipNear, invViewProj);
+    float4 worldFar = mul(clipFar, invViewProj);
+    worldNear.xyz /= worldNear.w;
+    worldFar.xyz /= worldFar.w;
+    
+    // Ray setup
+    float3 rayOrigin = cameraPos_time.xyz;
+    float3 rayDir = normalize(worldFar.xyz - rayOrigin);
+    float time = cameraPos_time.w;
+    
+    // Ray distance
+    float maxDistance = params2.x;
+    float sceneDistance = length(worldFar.xyz - rayOrigin);
+    float rayLength = (depth >= 1.0) ? maxDistance : min(sceneDistance, maxDistance);
+    
+    // Light scattering setup
+    float3 lightDir = normalize(sunDir_scattering.xyz);
+    float cosTheta = dot(rayDir, lightDir);
+    float scatterCoeff = sunDir_scattering.w;
+    float mieG = params1.w;
+    float phase = phaseFunction(cosTheta, mieG);
+    
+    // Ray marching
+    float stepSize = rayLength / float(numSteps);
+    float jitter = hash(float3(input.position.xy, time * 100.0));
+    float3 currentPos = rayOrigin + rayDir * stepSize * jitter;
+    
+    float3 scatteredLight = float3(0, 0, 0);
+    float transmittance = 1.0;
+    
+    [loop]
+    for (int i = 0; i < numSteps; i++)
+    {
+        float density = getFogDensity(currentPos, time);
+        
+        if (density > 0.0001)
+        {
+            float extinction = density * 0.05 * stepSize;
+            float sampleTransmittance = exp(-extinction);
+            
+            // In-scattering
+            float lightAtten = exp(-density * max(currentPos.y - params1.y, 0.0) * 0.02);
+            float3 inScatter = sunColor_pad.xyz * phase * scatterCoeff * density * lightAtten;
+            inScatter += ambientColor_pad.xyz * density * 0.3;
+            
+            scatteredLight += transmittance * inScatter * stepSize;
+            transmittance *= sampleTransmittance;
+            
+            if (transmittance < 0.01)
+            {
+                transmittance = 0.0;
+                break;
+            }
+        }
+        
+        currentPos += rayDir * stepSize;
+    }
+    
+    float fogOpacity = 1.0 - transmittance;
+    return float4(scatteredLight, fogOpacity);
+}

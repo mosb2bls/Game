@@ -1,0 +1,31 @@
+cbuffer staticMeshBuffer : register(b0)
+{
+    float4x4 W;
+    float4x4 VP;
+};
+
+struct VSIn
+{
+    float3 pos     : POSITION;
+    float3 normal  : NORMAL;
+    float3 tangent : TANGENT;
+    float2 uv      : TEXCOORD;
+};
+
+struct VSOut
+{
+    float4 pos   : SV_POSITION;
+    float2 uv    : TEXCOORD0;
+    float3 tint  : TEXCOORD1;
+    float alpha  : TEXCOORD2;
+};
+
+VSOut VS(VSIn i)
+{
+    VSOut o;
+    o.pos = float4(i.pos.xy, 0.0, 1.0);
+    o.uv = i.uv;
+    o.tint = i.normal;       // Tint color stored in normal (use white for no tint)
+    o.alpha = i.tangent.x;   // Alpha stored in tangent.x
+    return o;
+}

@@ -1,0 +1,43 @@
+// Constant Buffer matching C++ logic
+cbuffer staticMeshBuffer : register(b0)
+{
+    float4x4 W;  // World Matrix
+    float4x4 VP; // View-Projection Matrix
+};
+
+// Input from C++ (Mesh.h static layout)
+struct VSIn
+{
+    float3 pos     : POSITION;
+    float3 normal  : NORMAL;
+    float3 tangent : TANGENT;
+    float2 uv      : TEXCOORD;
+};
+
+// Output to Pixel Shader
+struct VSOut
+{
+    float4 pos    : SV_POSITION;
+    float3 normal : NORMAL;
+    float2 uv     : TEXCOORD0;
+};
+
+VSOut VS(VSIn i)
+{
+    VSOut o;
+
+    // 1. Calculate World Position
+    float4 wp = mul(float4(i.pos, 1.0f), W);
+    
+    // 2. Calculate Final Position on Screen (Clip Space)
+    o.pos = mul(wp, VP);
+    
+    // 3. Rotate Normal (Important for lighting to match terrain rotation)
+    // We cast W to float3x3 to only rotate, not translate
+    o.normal = normalize(mul(i.normal, (float3x3)W));
+    
+    // 4. Pass Texture Coordinates WITHOUT FLIP (terrain doesn't need it)
+    o.uv = i.uv;
+    
+    return o;
+}

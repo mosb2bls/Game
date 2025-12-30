@@ -1,0 +1,26 @@
+// ============================================================================
+// VSFullscreen.hlsl - Fullscreen Triangle Vertex Shader
+// ============================================================================
+// Used by all post-process passes (fog, blur, composite)
+// Renders a single triangle that covers the entire screen
+// ============================================================================
+
+struct VSInput
+{
+    float2 position : POSITION;
+    float2 texcoord : TEXCOORD;
+};
+
+struct VSOutput
+{
+    float4 position : SV_POSITION;
+    float2 texcoord : TEXCOORD0;
+};
+
+VSOutput main(VSInput input)
+{
+    VSOutput output;
+    output.position = float4(input.position, 0.0, 1.0);
+    output.texcoord = input.texcoord;
+    return output;
+}

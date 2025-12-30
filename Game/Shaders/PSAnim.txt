@@ -1,0 +1,26 @@
+// Texture and Sampler definitions
+Texture2D    g_texture : register(t0);
+SamplerState g_sampler : register(s0);
+
+struct PS_INPUT
+{
+    float4 Pos : SV_POSITION;
+    float3 Normal : NORMAL;
+    float3 Tangent : TANGENT;
+    float2 TexCoords : TEXCOORD;
+};
+
+float4 PS(PS_INPUT input) : SV_Target0
+{
+    // 1. Sample the texture
+    float4 texColor = g_texture.Sample(g_sampler, input.TexCoords);
+    
+    // 2. Simple lighting
+    float3 lightDir = normalize(float3(0.5f, 1.0f, -0.5f));
+    float diff = saturate(dot(normalize(input.Normal), lightDir));
+    
+    // 3. Combine texture with lighting
+    float3 finalColor = texColor.rgb * (diff * 0.7f + 0.3f);
+    
+    return float4(finalColor, texColor.a);
+}

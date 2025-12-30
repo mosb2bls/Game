@@ -1,0 +1,51 @@
+// ============================================================================
+// PSFogComposite.hlsl - Final Fog Composite
+// ============================================================================
+// Blends the blurred scene with fog color
+// Uses fog opacity to mix between sharp and blurred scene
+// ============================================================================
+
+cbuffer CompositeBuffer : register(b0)
+{
+    float4 screenSize;      // x = width, y = height, z = fogWidth, w = fogHeight
+    float4 compositeParams; // x = blur blend strength, yzw = unused
+};
+
+Texture2D<float4> sceneTexture : register(t0);     // Original sharp scene
+Texture2D<float4> blurredTexture : register(t1);   // Blurred scene
+Texture2D<float4> fogTexture : register(t2);       // Fog color and opacity
+SamplerState linearSampler : register(s0);
+
+struct PSInput
+{
+    float4 position : SV_POSITION;
+    float2 texcoord : TEXCOORD0;
+};
+
+float4 main(PSInput input) : SV_TARGET
+{
+    float2 uv = input.texcoord;
+    
+    // Sample all textures
+    float3 sharpScene = sceneTexture.Sample(linearSampler, uv).rgb;
+    float3 blurredScene = blurredTexture.Sample(linearSampler, uv).rgb;
+    float4 fog = fogTexture.Sample(linearSampler, uv);
+    
+    float fogOpacity = fog.a;
+    float3 fogColor = fog.rgb;
+    
+    // Blend between sharp and blurred based on fog opacity
+    float blurBlend = compositeParams.x;
+    float blurAmount = fogOpacity * blurBlend;
+    float3 scene = lerp(sharpScene, blurredScene, saturate(blurAmount));
+    
+    // Apply fog color
+    // scene * transmittance + fog_scattering
+    float transmittance = 1.0 - fogOpacity;
+    float3 finalColor = scene * transmittance + fogColor;
+    
+    // Simple tone mapping to prevent over-bright areas
+    finalColor = finalColor / (1.0 + finalColor * 0.2);
+    
+    return float4(saturate(finalColor), 1.0);
+}

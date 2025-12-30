@@ -1,0 +1,144 @@
+
+
+cbuffer WaterBuffer : register(b0)
+{
+    float4x4 worldViewProj;
+    float4x4 world;
+    float4x4 reflectionMatrix;
+    float4 cameraPos_time;          // xyz = camera position, w = time
+    float4 waterParams;             // x = waterLevel, y = radius, z = transparency, w = fresnelPower
+    float4 shallowColor;            // xyz = color, w = fresnelBias
+    float4 deepColor;               // xyz = color, w = reflectionStrength
+    float4 sunDirection;            // xyz = direction, w = specularPower
+    float4 sunColor;                // xyz = color, w = specularIntensity
+    float4 waveParams;              // x = speed, y = scale, z = distortion, w = unused
+    float4 screenParams;            // x = width, y = height, z = 1/width, w = 1/height
+    
+    float4 waveDirections[4];
+    float4 waveParams2[4];
+};
+
+// Reflection texture
+Texture2D<float4> reflectionTexture : register(t0);
+SamplerState linearSampler : register(s0);
+
+struct PSInput
+{
+    float4 position : SV_POSITION;
+    float3 worldPos : TEXCOORD0;
+    float3 normal : TEXCOORD1;
+    float2 uv : TEXCOORD2;
+    float4 reflectPos : TEXCOORD3;
+    float3 viewDir : TEXCOORD4;
+    float edgeFade : TEXCOORD5;
+};
+
+// ============================================================================
+// FRESNEL APPROXIMATION (Schlick)
+// ============================================================================
+float FresnelSchlick(float cosTheta, float F0, float power)
+{
+    return F0 + (1.0 - F0) * pow(saturate(1.0 - cosTheta), power);
+}
+
+// ============================================================================
+// MAIN
+// ============================================================================
+float4 PS(PSInput input) : SV_TARGET
+{
+    // Normalize interpolated vectors
+    float3 N = normalize(input.normal);
+    float3 V = normalize(input.viewDir);
+    float3 L = normalize(sunDirection.xyz);
+    
+    // ========================================================================
+    // REFLECTION
+    // ========================================================================
+    
+    // Project reflection position to texture coordinates
+    float2 reflectUV = input.reflectPos.xy / input.reflectPos.w;
+    reflectUV = reflectUV * 0.5 + 0.5;  // Convert from [-1,1] to [0,1]
+    reflectUV.y = 1.0 - reflectUV.y;    // Flip Y
+    
+    // Distort reflection based on normal (wave distortion)
+    float distortion = waveParams.z;
+    reflectUV += N.xz * distortion;
+    
+    // Clamp to valid range
+    reflectUV = saturate(reflectUV);
+    
+    // Sample reflection
+    float3 reflectionColor = reflectionTexture.Sample(linearSampler, reflectUV).rgb;
+    
+    // ========================================================================
+    // FRESNEL
+    // ========================================================================
+    
+    float NdotV = saturate(dot(N, V));
+    float fresnelBias = shallowColor.w;
+    float fresnelPower = waterParams.w;
+    float fresnel = FresnelSchlick(NdotV, fresnelBias, fresnelPower);
+    
+    // ========================================================================
+    // WATER COLOR (Depth-based)
+    // ========================================================================
+    
+    // Simulate depth coloring based on distance from edge
+    // In a real implementation, you'd sample scene depth here
+    float3 shallow = shallowColor.xyz;
+    float3 deep = deepColor.xyz;
+    
+    // Use UV distance from center as fake depth
+    float2 centerOffset = input.uv - float2(0.5, 0.5);
+    float fakeDepth = saturate(1.0 - length(centerOffset) * 2.0);
+    
+    float3 waterColor = lerp(shallow, deep, fakeDepth * 0.5);
+    
+    // ========================================================================
+    // SPECULAR (Sun highlight)
+    // ========================================================================
+    
+    float3 H = normalize(L + V);  // Half vector
+    float NdotH = saturate(dot(N, H));
+    float specularPower = sunDirection.w;
+    float specularIntensity = sunColor.w;
+    
+    float specular = pow(NdotH, specularPower) * specularIntensity;
+    float3 specularColor = sunColor.xyz * specular;
+    
+    // Only show specular when sun is above horizon and facing camera
+    float NdotL = saturate(dot(N, L));
+    specularColor *= NdotL;
+    
+    // ========================================================================
+    // FINAL COMPOSITION
+    // ========================================================================
+    
+    float reflectionStrength = deepColor.w;
+    
+    // Blend water color with reflection based on fresnel
+    float3 finalColor = lerp(waterColor, reflectionColor * reflectionStrength, fresnel);
+    
+    // Add specular on top
+    finalColor += specularColor;
+    
+    // ========================================================================
+    // TRANSPARENCY
+    // ========================================================================
+    
+    float baseTransparency = waterParams.z;
+    
+    // More transparent at edges (shallow water)
+    float edgeTransparency = lerp(0.3, 1.0, fakeDepth);
+    
+    // Apply edge fade for shore
+    float alpha = baseTransparency * edgeTransparency * input.edgeFade;
+    
+    // Make reflection areas more opaque
+    alpha = lerp(alpha, 1.0, fresnel * 0.5);
+    
+    // Ensure some minimum visibility
+    alpha = max(alpha, 0.4);
+    
+    return float4(finalColor, alpha);
+}

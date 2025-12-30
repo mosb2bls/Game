@@ -1,0 +1,66 @@
+cbuffer rockBuffer : register(b0)
+{
+    float4x4 W;
+    float4x4 VP;
+    float4 cameraPos;  // xyz=position, w=viewDistance
+};
+
+// Per-vertex data (from mesh)
+struct VS_INPUT
+{
+    float3 Pos : POSITION;
+    float3 Normal : NORMAL;
+    float3 Tangent : TANGENT;
+    float2 TexCoords : TEXCOORD;
+    
+    // Per-instance data (input layout slot 1)
+    float3 InstancePos : INSTANCEPOS;
+    float InstanceRotY : INSTANCEROT;
+    float InstanceScale : INSTANCESCALE;
+    uint InstanceID : SV_InstanceID;
+};
+
+struct PS_INPUT
+{
+    float4 Pos : SV_POSITION;
+    float3 Normal : NORMAL;
+    float2 TexCoords : TEXCOORD0;
+    float3 WorldPos : TEXCOORD1;
+};
+
+PS_INPUT VS(VS_INPUT input)
+{
+    PS_INPUT output;
+    
+    // 1. Apply instance scale
+    float3 localPos = input.Pos * input.InstanceScale;
+    
+    // 2. Rotation matrix around Y axis
+    float cosR = cos(input.InstanceRotY);
+    float sinR = sin(input.InstanceRotY);
+    float3x3 rotationMatrix = float3x3(
+        cosR,  0.0, sinR,
+        0.0,   1.0, 0.0,
+        -sinR, 0.0, cosR
+    );
+    
+    localPos = mul(localPos, rotationMatrix);
+    float3 localNormal = mul(input.Normal, rotationMatrix);
+    
+    // 3. Translate to world position
+    float3 worldPos = localPos + input.InstancePos;
+    output.WorldPos = worldPos;
+    
+    // 4. Transform to clip space
+    float4 worldPos4 = float4(worldPos, 1.0);
+    output.Pos = mul(worldPos4, VP);
+    
+    // 5. Transform normal to world space
+    output.Normal = normalize(mul(localNormal, (float3x3)W));
+    
+    // 6. FIX: Scale texture coordinates to tile properly
+    // Option A: Scale existing UVs
+    output.TexCoords = input.TexCoords * 2.0;  // Try 2.0, 3.0, or 4.0
+    
+    return output;
+}

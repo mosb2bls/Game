@@ -1,0 +1,202 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Core.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Game.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Window.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="assets.cfg">
+      <Filter>Source Files</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="Shaders\PSAnim.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
+    <Text Include="Shaders\PSBlurHorizontal.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
+    <Text Include="Shaders\PSBlurVertical.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
+    <Text Include="Shaders\PSCrosshair.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
+    <Text Include="Shaders\PSFogComposite.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
+    <Text Include="Shaders\PSFogRaymarch.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
+    <Text Include="Shaders\PSGrass.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
+    <Text Include="Shaders\PSLakeBottom.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
+    <Text Include="Shaders\PSRock.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
+    <Text Include="Shaders\PSSky.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
+    <Text Include="Shaders\PSStartMenu.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
+    <Text Include="Shaders\PSTerrain.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
+    <Text Include="Shaders\PSTree.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
+    <Text Include="Shaders\PSTreeShadow.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
+    <Text Include="Shaders\PSTreeTrunk.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
+    <Text Include="Shaders\PSUntextured.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
+    <Text Include="Shaders\PSWater.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
+    <Text Include="Shaders\VSAnim.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
+    <Text Include="Shaders\VSCrosshair.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
+    <Text Include="Shaders\VSFullscreen.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
+    <Text Include="Shaders\VSGrass.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
+    <Text Include="Shaders\VSLakeBottom.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
+    <Text Include="Shaders\VSRock.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
+    <Text Include="Shaders\VSSky.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
+    <Text Include="Shaders\VSStartMenu.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
+    <Text Include="Shaders\VSTerrain.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
+    <Text Include="Shaders\VSTree.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
+    <Text Include="Shaders\VSTreeShadow.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
+    <Text Include="Shaders\VSWater.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Rocks.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Shaders.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SkyDome.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="StartMenu.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="stb_image.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Timer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Tree.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Window.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Animation.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="AssetManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Core.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Crosshair.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Fog.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Fullscreenquad.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GEMLoader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Gun.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="HeightmapTerrain.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="HybridGrassField.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Lake.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="LakeBottom.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="LOD.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Maths.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Mesh.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="modelState.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PSO.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="RandomGenerator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

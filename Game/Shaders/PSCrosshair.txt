@@ -1,0 +1,10 @@
+struct PSIn
+{
+    float4 pos : SV_POSITION;
+};
+
+float4 PS(PSIn i) : SV_TARGET
+{
+    // Green crosshair with transparency
+    return float4(1.0, 1.0, 1.0, 0.85);
+}

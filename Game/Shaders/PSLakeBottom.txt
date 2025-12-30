@@ -1,0 +1,49 @@
+Texture2D    g_texture : register(t0);
+SamplerState g_sampler : register(s0);
+
+struct PSIn
+{
+    float4 pos      : SV_POSITION;
+    float3 normal   : NORMAL;
+    float2 uv       : TEXCOORD0;
+    float3 worldPos : TEXCOORD1;
+};
+
+float4 PS(PSIn i) : SV_TARGET
+{
+    // ============ CLIP TO LAKE AREA ONLY ============
+    // Hardcoded values - match your Game.cpp lake config
+    float2 lakeCenter = float2(30.0f, 40.0f);  // lake.config.center.x, lake.config.center.z
+    float lakeRadius = 25.0f;                   // lake.config.radius
+    float waterLevel = 22.5f;                   // lake.config.waterLevel (adjust to your value)
+    
+    // Discard if above water level
+    if (i.worldPos.y > waterLevel)
+    {
+        discard;
+    }
+    
+    // Discard if outside lake radius
+    float2 toLake = i.worldPos.xz - lakeCenter;
+    if (dot(toLake, toLake) > lakeRadius * lakeRadius)
+    {
+        discard;
+    }
+    // ================================================
+
+    // Sample texture
+    float4 texColor = g_texture.Sample(g_sampler, i.uv);
+    
+    // Simple lighting
+    float3 lightDir = normalize(float3(0.5f, 1.0f, -0.5f));
+    float diff = saturate(dot(normalize(i.normal), lightDir));
+    
+    // Combine lighting with underwater tint
+    float3 lit = texColor.rgb * (diff * 0.5f + 0.3f);
+    
+    // Apply blue-green underwater tint
+    float3 waterTint = float3(0.4f, 0.6f, 0.7f);
+    float3 finalColor = lit * waterTint;
+    
+    return float4(finalColor, 1.0f);
+}

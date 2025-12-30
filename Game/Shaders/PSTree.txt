@@ -1,0 +1,44 @@
+Texture2D    g_texture : register(t0);
+SamplerState g_sampler : register(s0);
+
+struct PSIn
+{
+    float4 pos    : SV_POSITION;
+    float3 normal : NORMAL;
+    float2 uv     : TEXCOORD0;
+};
+
+float4 PS(PSIn i) : SV_TARGET
+{
+    float4 texColor = g_texture.Sample(g_sampler, i.uv);
+    
+    // Alpha test for transparent parts
+    if (texColor.a < 0.5)
+    {
+        discard;
+    }
+    
+    float3 normal = normalize(i.normal);
+    
+    // Detect leaves: normals pointing mostly up/sideways (not horizontal like trunk)
+    // Trunk normals point outward (horizontal), leaves point more varied
+    float isLeaf = 1.0 - abs(normal.y);  // Low for top/bottom facing, high for side facing
+    
+    // If texture looks wrong (too white/gray), apply green tint to leaves
+    float brightness = (texColor.r + texColor.g + texColor.b) / 3.0;
+    if (brightness > 0.7)  // Likely bad texture mapping
+    {
+        // Apply green color for leaves, brown for trunk
+        float3 leafColor = float3(0.2, 0.5, 0.15);
+        float3 trunkColor = float3(0.4, 0.25, 0.1);
+        texColor.rgb = lerp(trunkColor, leafColor, isLeaf);
+    }
+    
+    // Lighting
+    float3 lightDir = normalize(float3(0.5, 1.0, -0.5));
+    float diff = saturate(dot(normal, lightDir));
+    
+    float3 finalColor = texColor.rgb * (diff * 0.6 + 0.4);
+    
+    return float4(finalColor, texColor.a);
+}

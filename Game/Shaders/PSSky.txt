@@ -1,0 +1,26 @@
+
+// Constant buffer matching C++ (even if unused, keep slot b0)
+cbuffer skyPSBuffer : register(b0)
+{
+    float4 zenithColor; 
+    float4 horizonColor;
+};
+
+// Texture (t0) and Sampler (s0)
+Texture2D    g_texture : register(t0);
+SamplerState g_sampler : register(s0);
+
+struct PSIn
+{
+    float4 pos : SV_POSITION;
+    float2 uv  : TEXCOORD0;
+};
+
+float4 PS(PSIn i) : SV_TARGET
+{
+    // Sample the sky texture
+    // 'saturate' is optional but safe
+    float4 skyColor = g_texture.Sample(g_sampler, i.uv);
+    
+    return skyColor;
+}

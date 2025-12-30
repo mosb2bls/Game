@@ -1,0 +1,46 @@
+// Texture and Sampler definitions
+Texture2D    g_texture : register(t0);
+SamplerState g_sampler : register(s0);
+
+// Input - KEEP ORIGINAL, no changes
+struct PSIn
+{
+    float4 pos    : SV_POSITION;
+    float3 normal : NORMAL;
+    float2 uv     : TEXCOORD0;
+};
+
+float4 PS(PSIn i) : SV_TARGET
+{
+    // ============ LAKE DISCARD (Using UV to calculate world position) ============
+    // Terrain size is 300x300, centered at origin
+    // UV 0-1 maps to world position -150 to +150
+    float terrainSizeX = 300.0f;
+    float terrainSizeZ = 300.0f;
+    
+    float worldX = (i.uv.x - 0.5f) * terrainSizeX;  // -150 to +150
+    float worldZ = (i.uv.y - 0.5f) * terrainSizeZ;  // -150 to +150
+    
+    // Lake parameters (match your Game.cpp values)
+    float2 lakeCenter = float2(30.0f, 40.0f);
+    float lakeRadius = 25.0f;
+    
+    float2 toLake = float2(worldX, worldZ) - lakeCenter;
+    if (dot(toLake, toLake) < lakeRadius * lakeRadius)
+    {
+        discard;
+    }
+    // ==============================================================================
+
+    // 1. Sample the Texture Color
+    float4 texColor = g_texture.Sample(g_sampler, i.uv);
+    
+    // 2. Simple Sunlight Logic
+    float3 lightDir = normalize(float3(0.5f, 1.0f, -0.5f));
+    float diff = saturate(dot(normalize(i.normal), lightDir));
+    
+    // 3. Combine: Texture * (Diffuse + Ambient)
+    float3 finalColor = texColor.rgb * (diff * 0.7f + 0.3f);
+    
+    return float4(finalColor, 1.0f);
+}

@@ -1,0 +1,82 @@
+// ============================================================================
+// PSBlurHorizontal.hlsl - Horizontal Gaussian Blur
+// ============================================================================
+// First pass of separable Gaussian blur
+// Blur amount is modulated by fog opacity (more fog = more blur)
+// ============================================================================
+
+cbuffer BlurBuffer : register(b0)
+{
+    float4 screenSize;      // x = width, y = height, z = 1/width, w = 1/height
+    float4 blurParams;      // x = blur strength, y = max blur radius, z/w = unused
+};
+
+Texture2D<float4> sceneTexture : register(t0);
+Texture2D<float4> fogTexture : register(t2);
+SamplerState linearSampler : register(s0);
+
+struct PSInput
+{
+    float4 position : SV_POSITION;
+    float2 texcoord : TEXCOORD0;
+};
+
+// Gaussian weights for 13-tap filter (sigma ~= 4)
+static const int KERNEL_SIZE = 13;
+static const float weights[KERNEL_SIZE] = {
+    0.0044, 0.0115, 0.0257, 0.0488, 0.0786, 0.1070, 0.1225,
+    0.1070, 0.0786, 0.0488, 0.0257, 0.0115, 0.0044
+};
+static const float offsets[KERNEL_SIZE] = {
+    -6.0, -5.0, -4.0, -3.0, -2.0, -1.0, 0.0,
+    1.0, 2.0, 3.0, 4.0, 5.0, 6.0
+};
+
+float4 main(PSInput input) : SV_TARGET
+{
+    float2 uv = input.texcoord;
+    float2 texelSize = float2(screenSize.z, screenSize.w);
+    
+    // Sample fog to get blur amount
+    float4 fog = fogTexture.Sample(linearSampler, uv);
+    float fogOpacity = fog.a;
+    
+    // Scale blur by fog opacity (more fog = more blur)
+    float blurStrength = blurParams.x * fogOpacity;
+    float maxRadius = blurParams.y;
+    float blurRadius = blurStrength * maxRadius;
+    
+    // If no blur needed, just return scene color
+    if (blurRadius < 0.5)
+    {
+        return sceneTexture.Sample(linearSampler, uv);
+    }
+    
+    // Normalize blur radius to 0-1 range for weight scaling
+    float radiusScale = min(blurRadius / 6.0, 1.0);
+    
+    // Horizontal blur
+    float4 color = float4(0, 0, 0, 0);
+    float totalWeight = 0.0;
+    
+    [unroll]
+    for (int i = 0; i < KERNEL_SIZE; i++)
+    {
+        float offset = offsets[i] * radiusScale;
+        float2 sampleUV = uv + float2(offset * texelSize.x, 0.0);
+        
+        // Clamp to screen edges
+        sampleUV = saturate(sampleUV);
+        
+        float weight = weights[i];
+        color += sceneTexture.Sample(linearSampler, sampleUV) * weight;
+        totalWeight += weight;
+    }
+    
+    color /= totalWeight;
+    
+    // Store fog opacity in alpha for vertical pass
+    color.a = fogOpacity;
+    
+    return color;
+}
