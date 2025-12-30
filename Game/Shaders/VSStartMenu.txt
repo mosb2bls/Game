@@ -25,7 +25,7 @@ VSOut VS(VSIn i)
     VSOut o;
     o.pos = float4(i.pos.xy, 0.0, 1.0);
     o.uv = i.uv;
-    o.tint = i.normal;       // Tint color stored in normal (use white for no tint)
-    o.alpha = i.tangent.x;   // Alpha stored in tangent.x
+    o.tint = i.normal;       
+    o.alpha = i.tangent.x;   
     return o;
 }

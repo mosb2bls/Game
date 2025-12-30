@@ -1,9 +1,4 @@
-// ============================================================================
-// PSFogComposite.hlsl - Final Fog Composite
-// ============================================================================
-// Blends the blurred scene with fog color
-// Uses fog opacity to mix between sharp and blurred scene
-// ============================================================================
+
 
 cbuffer CompositeBuffer : register(b0)
 {

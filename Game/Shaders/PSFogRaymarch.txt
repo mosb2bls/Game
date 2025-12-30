@@ -1,9 +1,4 @@
-// ============================================================================
-// PSFogRaymarch.hlsl - Volumetric Fog Ray Marching
-// ============================================================================
-// Performs ray marching through the scene to calculate fog density
-// Outputs: RGB = fog color, A = fog opacity (used for blur amount)
-// ============================================================================
+
 
 cbuffer FogBuffer : register(b0)
 {

@@ -2,10 +2,9 @@ cbuffer rockBuffer : register(b0)
 {
     float4x4 W;
     float4x4 VP;
-    float4 cameraPos;  // xyz=position, w=viewDistance
+    float4 cameraPos; 
 };
 
-// Per-vertex data (from mesh)
 struct VS_INPUT
 {
     float3 Pos : POSITION;
@@ -13,7 +12,7 @@ struct VS_INPUT
     float3 Tangent : TANGENT;
     float2 TexCoords : TEXCOORD;
     
-    // Per-instance data (input layout slot 1)
+ 
     float3 InstancePos : INSTANCEPOS;
     float InstanceRotY : INSTANCEROT;
     float InstanceScale : INSTANCESCALE;
@@ -59,8 +58,8 @@ PS_INPUT VS(VS_INPUT input)
     output.Normal = normalize(mul(localNormal, (float3x3)W));
     
     // 6. FIX: Scale texture coordinates to tile properly
-    // Option A: Scale existing UVs
-    output.TexCoords = input.TexCoords * 2.0;  // Try 2.0, 3.0, or 4.0
+   
+    output.TexCoords = input.TexCoords * 2.0;  
     
     return output;
 }

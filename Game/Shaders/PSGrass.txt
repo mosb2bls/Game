@@ -1,8 +1,8 @@
 cbuffer grassPSBuffer : register(b0)
 {
-    float4 lightDir_ambient;  // xyz=light direction, w=ambient strength
-    float4 grassColorTop;     // Color at tip of grass
-    float4 grassColorBottom;  // Color at base of grass
+    float4 lightDir_ambient;  
+    float4 grassColorTop;    
+    float4 grassColorBottom;  
 };
 
 Texture2D g_texture : register(t0);
@@ -17,7 +17,7 @@ struct PS_INPUT
     float Height : TEXCOORD2;
 };
 
-// Simple noise for color variation
+
 float hash(float2 p)
 {
     return frac(sin(dot(p, float2(127.1, 311.7))) * 43758.5453);

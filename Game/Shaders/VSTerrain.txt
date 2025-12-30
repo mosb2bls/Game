@@ -1,11 +1,11 @@
-// Constant Buffer matching C++ logic
+
 cbuffer staticMeshBuffer : register(b0)
 {
     float4x4 W;  // World Matrix
     float4x4 VP; // View-Projection Matrix
 };
 
-// Input from C++ (Mesh.h static layout)
+
 struct VSIn
 {
     float3 pos     : POSITION;

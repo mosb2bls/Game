@@ -15,7 +15,7 @@ float4 PS(PSIn i) : SV_TARGET
     float shadow = 1.0 - smoothstep(0.0, 1.0, dist);
     
     // Dark shadow color with alpha
-    float opacity = 0.65 * shadow;  // Adjust 0.4 for darker/lighter shadow
+    float opacity = 0.65 * shadow; 
     
     return float4(0.0, 0.0, 0.0, opacity);
 }

@@ -1,9 +1,4 @@
-// ============================================================================
-// PSBlurHorizontal.hlsl - Horizontal Gaussian Blur
-// ============================================================================
-// First pass of separable Gaussian blur
-// Blur amount is modulated by fog opacity (more fog = more blur)
-// ============================================================================
+
 
 cbuffer BlurBuffer : register(b0)
 {
@@ -21,7 +16,7 @@ struct PSInput
     float2 texcoord : TEXCOORD0;
 };
 
-// Gaussian weights for 13-tap filter (sigma ~= 4)
+
 static const int KERNEL_SIZE = 13;
 static const float weights[KERNEL_SIZE] = {
     0.0044, 0.0115, 0.0257, 0.0488, 0.0786, 0.1070, 0.1225,

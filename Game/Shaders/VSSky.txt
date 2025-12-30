@@ -21,15 +21,15 @@ struct VSOut
 VSOut VS(VSIn i)
 {
     VSOut o;
-    // Position Calculation
+  
     float4 wp = mul(float4(i.pos, 1.0f), W);
     float4 clip = mul(wp, VP);
     
-    // Depth Hack for Sky (z = w)
+    
     clip.z = clip.w;
     o.pos = clip;
 
-    // Texture Flip Fix
+   
     o.uv.x = i.uv.x;
     o.uv.y = i.uv.y; 
 

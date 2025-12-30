@@ -28,10 +28,10 @@ struct PS_INPUT
     float3 Normal : NORMAL;
     float2 TexCoords : TEXCOORD0;
     float3 WorldPos : TEXCOORD1;
-    float Height : TEXCOORD2;  // Height along blade (0=bottom, 1=top)
+    float Height : TEXCOORD2;  
 };
 
-// Simple 2D noise function for wind variation
+
 float noise(float2 p)
 {
     return frac(sin(dot(p, float2(127.1, 311.7))) * 43758.5453);
@@ -58,7 +58,7 @@ PS_INPUT VS(VS_INPUT input)
     
     // 3. Calculate height factor (0 at base, 1 at top)
     // Assuming grass blade vertices have Y from 0 (base) to some height
-    float heightFactor = saturate(input.Pos.y / 1.0); // Adjust divisor based on your model
+    float heightFactor = saturate(input.Pos.y / 1.0); 
     output.Height = heightFactor;
     
     // 4. Wind animation (affects only upper vertices)
@@ -81,7 +81,7 @@ PS_INPUT VS(VS_INPUT input)
     windEffect = windEffect * (0.7 + noiseVal * 0.3);
     
     // Apply wind displacement (only to upper part of grass)
-    float bendAmount = heightFactor * heightFactor; // Quadratic for natural bend
+    float bendAmount = heightFactor * heightFactor; 
     float3 windOffset = float3(
         windDir.x * windEffect * windStr * bendAmount * 0.3,
         -bendAmount * 0.1 * windEffect,  // Slight droop

@@ -1,9 +1,3 @@
-// ============================================================================
-// VSFullscreen.hlsl - Fullscreen Triangle Vertex Shader
-// ============================================================================
-// Used by all post-process passes (fog, blur, composite)
-// Renders a single triangle that covers the entire screen
-// ============================================================================
 
 struct VSInput
 {
